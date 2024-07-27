@@ -26,4 +26,4 @@ Na pasta swf está incluído tanto o player quanto os arquivos de jogo de cada v
 
 Rode ou o `thorvarium1.3_patched.swf` `thorvarium1.2_patched.swf` ou `thorvarium2_patched.swf` no seu player de flash depois de iniciar o servidor.
 
-**O JOGO NÃO FUNCIONARÁ NO RUFFLE.RS, POIS ESTE NÃO TEM SUPORTE A CONEXÃO COM A INTERNET.**
+**O JOGO NÃO FUNCIONARÁ NO RUFFLE.RS, POR CONTA DE UM ERRO. O BUG SERÁ CORRIGIDO NO FUTURO.**
