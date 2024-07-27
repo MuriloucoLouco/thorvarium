@@ -2,7 +2,7 @@
 
 Recriação do servidor de um antigo joguinho de flash, thorvarium.
 
-**SÓ CONSEGUI IMPLEMENTAR O CHATROOM ATÉ AGORA.**
+**O servidor ainda está muito instável, mas é possível já testar uma partida.**
 
 # Instalação:
 
