@@ -10,7 +10,7 @@ function login(xml, socket) {
   const username = decode_hex(xml['System.Login'][0]['Username'][0]['_']);
   const clientID = new_user(username, socket);
 
-  const msgID = xml['System.Login'][0]["$"]["msgID"];
+  const msgID = xml['System.Login'][0]['$']['msgID'];
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
@@ -20,7 +20,7 @@ function login(xml, socket) {
 }
 
 function logout(xml) {
-  const msgID = xml['System.Logout'][0]["$"]["msgID"];
+  const msgID = xml['System.Logout'][0]['$']['msgID'];
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
@@ -29,9 +29,9 @@ function logout(xml) {
 }
 
 function room_enter(xml) {
-  const msgID = xml['Room.Enter'][0]["$"]["msgID"];
-  const roomID = xml['Room.Enter'][0]["$"]["roomID"];
-  const clientID = xml['Room.Enter'][0]["$"]["clientID"];
+  const msgID = xml['Room.Enter'][0]['$']['msgID'];
+  const roomID = xml['Room.Enter'][0]['$']['roomID'];
+  const clientID = xml['Room.Enter'][0]['$']['clientID'];
   set_room(clientID, roomID);
 
   const root = builder.create('Accepted', {headless: true});
@@ -78,9 +78,11 @@ function room_enter(xml) {
 }
 
 function room_action(xml) {
-  const roomID = xml['Room.Action'][0]["$"]["roomID"];
-  const clientID = xml['Room.Action'][0]["$"]["clientID"];
+  const roomID = xml['Room.Action'][0]['$']['roomID'];
+  const clientID = xml['Room.Action'][0]['$']['clientID'];
   const message = decode_hex(xml['Room.Action'][0]['Chat'][0]['_']);
+
+  console.log();
 
   new_message(clientID, roomID, message);
 
@@ -96,13 +98,27 @@ function room_action(xml) {
   console.log('\x1b[33m' + res + '\x1b[0m');
 
   const room_users = get_room_users(roomID);
-  for (const user of room_users) {
-    if (user.clientID != clientID) {
-      user.socket.write(res + '\0');
-    }
+  const recipient_list = xml['Room.Action'][0]['RecipientList'];
+  const filtered_list = [];
+  if (recipient_list) {
+    filtered_list.push(...room_users.filter((user) => {
+      let allowed = false;
+      Object.keys(recipient_list[0]['$']).forEach((key) => {
+        if (user.username == decode_hex(recipient_list[0]['$'][key])) {
+          allowed = true;
+        }
+      });
+      return allowed;
+    }));
+  } else {
+    filtered_list.push(...room_users);
   }
 
-  return res;
+  for (const user of filtered_list) {
+    user.socket.write(res + '\0');
+  }
+
+  return null;
 }
 
 function parse_xml(xml, socket) {

@@ -26,7 +26,7 @@ function new_user(username, socket) {
     username: username,
     roomID: '',
     socket: socket,
-    groupID: 69,
+    groupID: 'participants',
     seatID: 69
   }
   users.push(user);
