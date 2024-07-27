@@ -43,14 +43,14 @@ function room_enter(xml) {
   const room_definition = root.ele('RoomDefinition');
   //const activity_attributes = room_definition.ele('ActivityAttributes');
   //const custom_data = room_definition.ele('CustomData');
-  const link_category = room_definition.ele('LinkCategory');
-  link_category.att('id', 'Thorvarium');
-  link_category.att('title', 'titulo do thorvarium');
-  link_category.att('description', 'descricao do thorvarium');
-  const room_link = link_category.ele('RoomLink');
-  room_link.att('id', 'Thorvarium 2');
-  room_link.att('title', 'outro do thorvarium');
-  room_link.att('description', 'mais uma descricao');
+    const link_category = room_definition.ele('LinkCategory');
+    link_category.att('id', 'Thorvarium');
+    link_category.att('title', 'titulo do thorvarium');
+    link_category.att('description', 'descricao do thorvarium');
+      const room_link = link_category.ele('RoomLink');
+      room_link.att('id', 'Thorvarium 2');
+      room_link.att('title', 'outro do thorvarium');
+      room_link.att('description', 'mais uma descricao');
 
   const participant_list = root.ele('ParticipantList');
   participant_list.att('groupID', get_user(clientID).groupID);
@@ -60,10 +60,12 @@ function room_enter(xml) {
     participant.att('groupID', user.groupID);
     participant.att('seatID', user.seatID)
   });
-
+  
   const room_users = get_room_users(roomID);
   for (const user of room_users) {
-    const broadcast = builder.create('Room.ParticipantEntered', {headless: true});
+    const broadcast = builder.create(
+      'Room.ParticipantEntered', {headless: true}
+    );
     broadcast.att('roomID', roomID);
     broadcast.att('username', get_user(clientID).username);
     broadcast.att('groupID', get_user(clientID).groupID);
