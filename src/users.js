@@ -1,5 +1,5 @@
 const { rand_int } = require('./tools.js');
-const MAX_USERS = 9999;
+const MAX_USERS = 99999;
 
 const users = [];
 
@@ -7,7 +7,7 @@ function new_clientID() {
   let clientID = rand_int(1, MAX_USERS);
 
   if (users.length == MAX_USERS) {
-    return MAX_USERS;
+    return null;
   }
 
   for (const user of users) {
@@ -21,15 +21,17 @@ function new_clientID() {
 
 function new_user(username, socket) {
   let clientID = new_clientID();
-  const user = {
-    clientID: clientID,
-    username: username,
-    roomID: '',
-    socket: socket,
-    groupID: 'participants',
-    seatID: 69
+  if (clientID) {
+    const user = {
+      clientID: clientID,
+      username: username,
+      roomID: '',
+      socket: socket,
+      groupID: 'participants',
+      seatID: 'MyseatID'
+    }
+    users.push(user);
   }
-  users.push(user);
   return clientID;
 }
 
@@ -50,6 +52,7 @@ function get_user(clientID) {
       return user;
     }
   }
+  return null;
 }
 
 function get_socket_user(socket) {
@@ -58,6 +61,16 @@ function get_socket_user(socket) {
       return user;
     }
   }
+  return null;
+}
+
+function get_username_user(username) {
+  for (const user of users) {
+    if (user.username == username) {
+      return user;
+    }
+  }
+  return null;
 }
 
 function get_room_users(roomID) {
@@ -91,5 +104,6 @@ module.exports = {
   get_user,
   get_room_users,
   get_socket_user,
-  remove_user
+  remove_user,
+  get_username_user
 };

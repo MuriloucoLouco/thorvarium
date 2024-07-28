@@ -12,28 +12,75 @@ const {
   get_user,
   get_room_users,
   get_socket_user,
-  remove_user
+  remove_user,
+  get_username_user
 } = require('./users.js');
 const { new_message } = require('./chat.js');
 
 const parser = new xml2js.Parser();
 
+function disconnect(user) {
+  remove_user(user.clientID);
+  const room_users = get_room_users(user.roomID);
+  for (const room_user of room_users) {
+    const broadcast = builder.create(
+      'Room.ParticipantExited', {headless: true}
+    );
+    broadcast.att('roomID', user.roomID);
+    broadcast.att('username', user.username);
+    broadcast.att('groupID', user.groupID);
+    broadcast.att('seatID', user.seatID);
+
+    room_user.socket.write(broadcast.end() + '\0');
+  }
+}
+
+function login_failed(reason, msgID) {
+  if (reason == 'username') {
+    const root = builder.create('Rejected', {headless: true});
+    root.att('msgID', msgID);
+    root.att('reason', 'Nome de usuário já utilizado.');
+    root.att('reasonID', 'username');
+    return root.end();
+  }
+
+  if (reason == 'server_full') {
+    const root = builder.create('Rejected', {headless: true});
+    root.att('msgID', msgID);
+    root.att('reason', 'Servidor cheio.');
+    root.att('reasonID', 'server_full');
+    return root.end();
+  }
+}
+
 function login(xml, socket) {
+  if (get_socket_user(socket)) {
+    disconnect(get_socket_user(socket));
+  }
+
   const username = decode_hex(xml['System.Login'][0]['Username'][0]['_']);
+  const msgID = xml['System.Login'][0]['$']['msgID'];
+
+  if (get_username_user(username)) {
+    return login_failed('username', msgID);
+  }
+
   const clientID = new_user(username, socket);
 
-  const msgID = xml['System.Login'][0]['$']['msgID'];
+  if (!get_user(clientID)) {
+    return login_failed('server_full', msgID);
+  }
 
   console.log(`Usuário logado: \x1b[35m${username}:${clientID}\x1b[0m`);
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
   root.ele('Ticket').txt(clientID);
-
   return root.end();
 }
 
-function logout(xml) {
+function logout(xml, socket) {
+  disconnect(get_socket_user(socket));
   const msgID = xml['System.Logout'][0]['$']['msgID'];
 
   const root = builder.create('Accepted', {headless: true});
@@ -135,22 +182,6 @@ function room_action(xml) {
   }
 
   return null;
-}
-
-function disconnect(user) {
-  remove_user(user.clientID);
-  const room_users = get_room_users(user.roomID);
-  for (const room_user of room_users) {
-    const broadcast = builder.create(
-      'Room.ParticipantExited', {headless: true}
-    );
-    broadcast.att('roomID', user.roomID);
-    broadcast.att('username', user.username);
-    broadcast.att('groupID', user.groupID);
-    broadcast.att('seatID', user.seatID);
-
-    room_user.socket.write(broadcast.end() + '\0');
-  }
 }
 
 function parse_xml(xml, socket) {
