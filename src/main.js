@@ -1,9 +1,21 @@
 const net = require('net');
-const xml2js = require('xml2js');
-const { decode_hex, encode_text } = require('./tools.js');
-const { new_user, set_room, get_user, get_room_users } = require('./users.js');
-const { new_message } = require('./chat.js');
 const builder = require('xmlbuilder');
+const xml2js = require('xml2js');
+
+const {
+  decode_hex,
+  encode_text
+} = require('./tools.js');
+const {
+  new_user,
+  set_room,
+  get_user,
+  get_room_users,
+  get_socket_user,
+  remove_user
+} = require('./users.js');
+const { new_message } = require('./chat.js');
+
 const parser = new xml2js.Parser();
 
 function login(xml, socket) {
@@ -11,6 +23,8 @@ function login(xml, socket) {
   const clientID = new_user(username, socket);
 
   const msgID = xml['System.Login'][0]['$']['msgID'];
+
+  console.log(`Usuário logado: \x1b[35m${username}:${clientID}\x1b[0m`);
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
@@ -34,15 +48,18 @@ function room_enter(xml) {
   const clientID = xml['Room.Enter'][0]['$']['clientID'];
   set_room(clientID, roomID);
 
+  console.log(`Usuário \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m entrou na sala ${roomID}`);
+
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
   root.att('groupID', get_user(clientID).groupID);
   root.att('seatID', get_user(clientID).seatID);
   root.att('roomCount', 1);
 
+  /* 
   const room_definition = root.ele('RoomDefinition');
-  //const activity_attributes = room_definition.ele('ActivityAttributes');
-  //const custom_data = room_definition.ele('CustomData');
+    const activity_attributes = room_definition.ele('ActivityAttributes');
+    const custom_data = room_definition.ele('CustomData');
     const link_category = room_definition.ele('LinkCategory');
     link_category.att('id', 'Thorvarium');
     link_category.att('title', 'titulo do thorvarium');
@@ -51,6 +68,7 @@ function room_enter(xml) {
       room_link.att('id', 'Thorvarium 2');
       room_link.att('title', 'outro do thorvarium');
       room_link.att('description', 'mais uma descricao');
+  */
 
   const participant_list = root.ele('ParticipantList');
   participant_list.att('groupID', get_user(clientID).groupID);
@@ -62,7 +80,7 @@ function room_enter(xml) {
   });
   
   const room_users = get_room_users(roomID);
-  for (const user of room_users) {
+  for (const room_user of room_users) {
     const broadcast = builder.create(
       'Room.ParticipantEntered', {headless: true}
     );
@@ -71,7 +89,7 @@ function room_enter(xml) {
     broadcast.att('groupID', get_user(clientID).groupID);
     broadcast.att('seatID', get_user(clientID).seatID);
 
-    user.socket.write(broadcast.end() + '\0');
+    room_user.socket.write(broadcast.end() + '\0');
   }
 
   return root.end();
@@ -82,7 +100,7 @@ function room_action(xml) {
   const clientID = xml['Room.Action'][0]['$']['clientID'];
   const message = decode_hex(xml['Room.Action'][0]['Chat'][0]['_']);
 
-  console.log();
+  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m: \x1b[33m${message}\x1b[0m`);
 
   new_message(clientID, roomID, message);
 
@@ -94,8 +112,6 @@ function room_action(xml) {
   chat.txt(encode_text(message));
 
   const res = root.end();
-
-  console.log('\x1b[33m' + res + '\x1b[0m');
 
   const room_users = get_room_users(roomID);
   const recipient_list = xml['Room.Action'][0]['RecipientList'];
@@ -121,6 +137,22 @@ function room_action(xml) {
   return null;
 }
 
+function disconnect(user) {
+  remove_user(user.clientID);
+  const room_users = get_room_users(user.roomID);
+  for (const room_user of room_users) {
+    const broadcast = builder.create(
+      'Room.ParticipantExited', {headless: true}
+    );
+    broadcast.att('roomID', user.roomID);
+    broadcast.att('username', user.username);
+    broadcast.att('groupID', user.groupID);
+    broadcast.att('seatID', user.seatID);
+
+    room_user.socket.write(broadcast.end() + '\0');
+  }
+}
+
 function parse_xml(xml, socket) {
   if ('System.Login' in xml) {
     return login(xml, socket);
@@ -138,15 +170,19 @@ function parse_xml(xml, socket) {
 
 const server = net.createServer((socket) => {
   socket.on('data', (data) => {
-    console.log('\x1b[32m' + String(data) + '\x1b[0m');
     const formated_data = '<root>'+String(data).replace(/\0$/, '')+'</root>';
     parser.parseString(formated_data, (err, result) => {
       const res = parse_xml(result.root, socket);
       if (res) {
-        console.log('\x1b[34m' + res + '\x1b[0m');
         socket.write(res + '\0');
       }
     });
+  });
+
+  socket.on('close', () => {
+    const user = get_socket_user(socket)
+    console.log(`Usuário desconectado: \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
+    disconnect(user);
   });
 });
 

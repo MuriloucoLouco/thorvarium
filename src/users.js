@@ -33,9 +33,28 @@ function new_user(username, socket) {
   return clientID;
 }
 
+function remove_user(clientID) {
+  for (const user of users) {
+    if (user.clientID == clientID) {
+      const index = users.indexOf(user);
+      if (index > -1) {
+        users.splice(index, 1);
+      }
+    }
+  }
+}
+
 function get_user(clientID) {
   for (const user of users) {
     if (user.clientID == clientID) {
+      return user;
+    }
+  }
+}
+
+function get_socket_user(socket) {
+  for (const user of users) {
+    if (user.socket == socket) {
       return user;
     }
   }
@@ -65,4 +84,12 @@ function list_users() {
   }
 }
 
-module.exports = { new_user, set_room, list_users, get_user, get_room_users };
+module.exports = {
+  new_user,
+  set_room,
+  list_users,
+  get_user,
+  get_room_users,
+  get_socket_user,
+  remove_user
+};
