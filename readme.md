@@ -2,7 +2,7 @@
 
 Recriação do servidor de um antigo joguinho de flash, thorvarium.
 
-**O servidor ainda está muito instável, mas é possível já testar uma partida.**
+**O servidor está em progresso, mas está jogável.**
 
 # Instalação:
 
@@ -27,3 +27,28 @@ Na pasta swf está incluído tanto o player quanto os arquivos de jogo de cada v
 Rode ou o `thorvarium1.3_patched.swf` `thorvarium1.2_patched.swf` ou `thorvarium2_patched.swf` no seu player de flash depois de iniciar o servidor.
 
 **O JOGO NÃO FUNCIONARÁ NO RUFFLE.RS, POR CONTA DE UM ERRO. O BUG SERÁ CORRIGIDO NO FUTURO.**
+
+# To-Do List
+
+### Mensagens do servidor
+
+- [ ] `Exception`
+- [ ] `System.Notify`
+- [ ] `System.HaltedApp`
+- [ ] `System.Heartbeat`
+- [X] `Room.Action`
+- [X] `Room.ParticipantEntered`
+- [X] `Room.ParticipantExited`
+- [ ] `Room.CreateAccepted`
+- [ ] `Accepted`
+  - [x] `.sendLogin`
+  - [x] `.sendLogout`
+  - [x] `.sendEnter`
+  - [ ] `.sendExit`
+  - [ ] `.sendSetParticipantGroup`
+- [ ] `Rejected`
+  - [x] `.sendLogin`
+  - [x] `.sendLogout`
+  - [x] `.sendEnter`
+  - [ ] `.sendExit`
+  - [ ] `.sendSetParticipantGroup`
