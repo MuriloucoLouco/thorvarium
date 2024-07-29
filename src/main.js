@@ -22,6 +22,8 @@ const { new_message } = require('./chat.js');
 const src_dir = path.dirname(require.main.filename); // ./src
 const parser = new xml2js.Parser();
 
+const PORT = process.env.PORT || 9000;
+
 function policy_file() {
   try {
     const data = fs.readFileSync(path.join(src_dir, '../static/policy.xml'), 'utf8');
@@ -80,12 +82,19 @@ function login_failed(reason, msgID) {
 }
 
 function login(xml, socket) {
+  const username = decode_hex(xml['System.Login'][0]['Username'][0]['_']);
+  const msgID = xml['System.Login'][0]['$']['msgID'];
+
+  if (!msgID) {
+    return error();
+  }
+  if (!username) {
+    return error(msgID);
+  }
+
   if (get_socket_user(socket)) {
     disconnect(get_socket_user(socket));
   }
-
-  const username = decode_hex(xml['System.Login'][0]['Username'][0]['_']);
-  const msgID = xml['System.Login'][0]['$']['msgID'];
 
   if (get_username_user(username)) {
     return login_failed('username', msgID);
@@ -232,7 +241,7 @@ function room_action(xml) {
   const clientID = xml['Room.Action'][0]['$']['clientID'];
   const message = decode_hex(xml['Room.Action'][0]['Chat'][0]['_']);
 
-  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m: \x1b[33m${message}\x1b[0m`);
+  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m: \x1b[33m${message.slice(0,-1)}\x1b[0m`);
 
   new_message(clientID, roomID, message);
 
@@ -299,7 +308,8 @@ const server = net.createServer((socket) => {
   console.log('Usuário conectado!', socket.address());
 
   socket.on('data', (data) => {
-    const formated_data = '<root>'+String(data).replace(/\0$/, '')+'</root>';
+    const formated_data =
+      '<root>'+String(data).replace(/\0$/, '')+'</root>';
     parser.parseString(formated_data, (err, result) => {
       const res = parse_xml(result.root, socket);
       if (res) {
@@ -322,6 +332,7 @@ const server = net.createServer((socket) => {
     }
   });
 });
+
+console.log(`Servidor rodando em 0.0.0.0:${PORT}`);
+server.listen(PORT, '0.0.0.0');
 console.log();
-console.log("Servidor rodando em 0.0.0.0:9000");
-server.listen(9000, '0.0.0.0');
