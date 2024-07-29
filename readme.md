@@ -20,9 +20,9 @@ npm start
 
 # Abrindo o jogo
 
-Depois de iniciar o servidor, você precisa iniciar o jogo flash corretamente. Eu inclui no projeto uma versão standalone do Adobe Flash Player 7. A partir da versão 8, os standalones pararam de ter suporte a internet. Se não quiser usar o adobe flash player incluído, pode também usar o [Newgrounds Player](https://www.newgrounds.com/flash/player).
+Depois de iniciar o servidor, você precisa iniciar o jogo flash corretamente. Baixe o Flash Player para [linux](https://github.com/Grubsic/Adobe-Flash-Player-Debug-Downloads-Archive/raw/main/Linux/flash_player_sa_linux.x86_64.tar.gz) ou [windows](https://github.com/Grubsic/Adobe-Flash-Player-Debug-Downloads-Archive/raw/main/Windows/flashplayer_32_sa.exe)
 
-Na pasta swf está incluído tanto o player quanto os arquivos de jogo de cada versão. Eu consegui achar as versões 1.2, 1.3.1 e 2.0b. Cada versão pussui um patch para rodar no servidor local do seu computador (ao invés do servidor da globo que não existe mais, tf.globo.com).
+Na pasta swf está incluído tanto o player quanto os arquivos de jogo de cada versão. Eu consegui achar as versões 1.2, 1.3.1 e 2.0b. Cada versão pussui um patch para rodar no servidor local do seu computador (ao invés do servidor da globo que não existe mais, tf.globo.com) e com direito de acesso a internet.
 
 Rode ou o `thorvarium1.3_patched.swf` `thorvarium1.2_patched.swf` ou `thorvarium2_patched.swf` no seu player de flash depois de iniciar o servidor.
 
@@ -58,6 +58,7 @@ Eu ainda não sei se é simplesmente uma feature que estava no código mas não 
 
 ### Mensagens do cliente
 
+- [x] `policy-file-request`
 - [x] `System.Login`
 - [x] `System.Logout`
 - [x] `Room.Enter`

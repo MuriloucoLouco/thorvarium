@@ -1,6 +1,8 @@
 const net = require('net');
 const builder = require('xmlbuilder');
 const xml2js = require('xml2js');
+const path = require('path');
+const fs = require('fs');
 
 const {
   decode_hex,
@@ -17,7 +19,17 @@ const {
 } = require('./users.js');
 const { new_message } = require('./chat.js');
 
+const src_dir = path.dirname(require.main.filename); // ./src
 const parser = new xml2js.Parser();
+
+function policy_file() {
+  try {
+    const data = fs.readFileSync(path.join(src_dir, '../static/policy.xml'), 'utf8');
+    return data;
+  } catch (err) {
+    console.error(err);
+  }
+}
 
 function error(msgID) {
   console.log('\x1b[31mERRO!\x1b[0m');
@@ -259,6 +271,9 @@ function room_action(xml) {
 
 function parse_xml(xml, socket) {
   try {
+    if ('policy-file-request' in xml) {
+      return policy_file();
+    }
     if ('System.Login' in xml) {
       return login(xml, socket);
     }
@@ -281,6 +296,8 @@ function parse_xml(xml, socket) {
 }
 
 const server = net.createServer((socket) => {
+  console.log('Usuário conectado!', socket.address());
+
   socket.on('data', (data) => {
     const formated_data = '<root>'+String(data).replace(/\0$/, '')+'</root>';
     parser.parseString(formated_data, (err, result) => {
@@ -305,6 +322,6 @@ const server = net.createServer((socket) => {
     }
   });
 });
-
+console.log();
 console.log("Servidor rodando em 0.0.0.0:9000");
 server.listen(9000, '0.0.0.0');
