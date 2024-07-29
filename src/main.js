@@ -236,13 +236,16 @@ function room_exit(xml, socket) {
   return root.end();
 }
 
-function room_action(xml) {
+function room_action(xml, socket) {
   const roomID = xml['Room.Action'][0]['$']['roomID'];
   const clientID = xml['Room.Action'][0]['$']['clientID'];
   const message = decode_hex(xml['Room.Action'][0]['Chat'][0]['_']);
 
-  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m: \x1b[33m${message.slice(0,-1)}\x1b[0m`);
+  if (get_user(clientID).socket != socket) {
+    return error();
+  }
 
+  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m: \x1b[33m${message.slice(0,-1)}\x1b[0m`);
   new_message(clientID, roomID, message);
 
   const root = builder.create('Room.Action', {headless: true});
@@ -296,7 +299,7 @@ function parse_xml(xml, socket) {
       return room_exit(xml, socket);
     }
     if ('Room.Action' in xml) {
-      return room_action(xml);
+      return room_action(xml, socket);
     }
     return error();
   } catch (err) {
