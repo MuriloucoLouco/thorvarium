@@ -19,8 +19,21 @@ const { new_message } = require('./chat.js');
 
 const parser = new xml2js.Parser();
 
+function error(msgID) {
+  console.log('\x1b[31mERRO!\x1b[0m');
+  const root = builder.create('Exception', {headless: true});
+  root.att('reason', 'Erro na requisição.');
+  root.att('reasonID', 'server_error');
+  if (msgID) {
+    root.att('msgID', msgID);
+  } else {
+    root.att('msgID', 0);
+  }
+  
+  return root.end();
+}
+
 function disconnect(user) {
-  remove_user(user.clientID);
   const room_users = get_room_users(user.roomID);
   for (const room_user of room_users) {
     const broadcast = builder.create(
@@ -33,6 +46,7 @@ function disconnect(user) {
 
     room_user.socket.write(broadcast.end() + '\0');
   }
+  remove_user(user.clientID);
 }
 
 function login_failed(reason, msgID) {
@@ -80,8 +94,19 @@ function login(xml, socket) {
 }
 
 function logout(xml, socket) {
-  disconnect(get_socket_user(socket));
   const msgID = xml['System.Logout'][0]['$']['msgID'];
+  const clientID = xml['System.Logout'][0]['$']['clientID'];
+  const user = get_user(clientID);
+
+  if (!msgID) {
+    return error();
+  }
+  if (!clientID || user.socket != socket) {
+    return error(msgID);
+  }
+
+  console.log(`Usuário deslogado: \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
+  remove_user(user.clientID);
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
@@ -89,19 +114,41 @@ function logout(xml, socket) {
   return root.end();
 }
 
-function room_enter(xml) {
+function room_enter(xml, socket) {
   const msgID = xml['Room.Enter'][0]['$']['msgID'];
   const roomID = xml['Room.Enter'][0]['$']['roomID'];
   const clientID = xml['Room.Enter'][0]['$']['clientID'];
-  set_room(clientID, roomID);
 
-  console.log(`Usuário \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m entrou na sala ${roomID}`);
+  const user = get_user(clientID);
+
+  if (!msgID) {
+    return error();
+  }
+  if (!roomID || !clientID || user.socket != socket) {
+    return error(msgID);
+  }
+
+  set_room(clientID, roomID);
+  const room_users = get_room_users(roomID);
+  console.log(`Usuário \x1b[35m${user.username}:${clientID}\x1b[0m entrou na sala ${roomID}`);
+  
+  for (const room_user of room_users) {
+    const broadcast = builder.create(
+      'Room.ParticipantEntered', {headless: true}
+    );
+    broadcast.att('roomID', user.roomID);
+    broadcast.att('username', user.username);
+    broadcast.att('groupID', user.groupID);
+    broadcast.att('seatID', user.seatID);
+
+    room_user.socket.write(broadcast.end() + '\0');
+  }
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
-  root.att('groupID', get_user(clientID).groupID);
-  root.att('seatID', get_user(clientID).seatID);
-  root.att('roomCount', 1);
+  root.att('groupID', user.groupID);
+  root.att('seatID', user.seatID);
+  root.att('roomCount', room_users.length);
 
   /* 
   const room_definition = root.ele('RoomDefinition');
@@ -109,35 +156,61 @@ function room_enter(xml) {
     const custom_data = room_definition.ele('CustomData');
     const link_category = room_definition.ele('LinkCategory');
     link_category.att('id', 'Thorvarium');
-    link_category.att('title', 'titulo do thorvarium');
-    link_category.att('description', 'descricao do thorvarium');
+    link_category.att('title', 'Thorvarium');
+    link_category.att('description', 'Sala principal do Thorvarium');
       const room_link = link_category.ele('RoomLink');
-      room_link.att('id', 'Thorvarium 2');
-      room_link.att('title', 'outro do thorvarium');
-      room_link.att('description', 'mais uma descricao');
+      room_link.att('id', 'Thorvarium2');
+      room_link.att('title', 'Thorvarium2');
+      room_link.att('description', 'Sala secundaria');
   */
 
   const participant_list = root.ele('ParticipantList');
-  participant_list.att('groupID', get_user(clientID).groupID);
-  get_room_users(roomID).forEach((user) => {
+  participant_list.att('groupID', user.groupID);
+  room_users.forEach((room_user) => {
     const participant = participant_list.ele('Participant');
-    participant.att('username', user.username);
-    participant.att('groupID', user.groupID);
-    participant.att('seatID', user.seatID)
+    participant.att('username', room_user.username);
+    participant.att('groupID', room_user.groupID);
+    participant.att('seatID', room_user.seatID)
   });
-  
+
+  return root.end();
+}
+
+function room_exit(xml, socket) {
+  const msgID = xml['Room.Exit'][0]['$']['msgID'];
+  const roomID = xml['Room.Exit'][0]['$']['roomID'];
+  const clientID = xml['Room.Exit'][0]['$']['clientID'];
+
+  const user = get_user(clientID);
+
+  if (!msgID) {
+    return error();
+  }
+  if (!roomID || !clientID || user.socket != socket) {
+    return error(msgID);
+  }
+
+  set_room(clientID, '');
   const room_users = get_room_users(roomID);
+  console.log(`Usuário \x1b[35m${user.username}:${clientID}\x1b[0m saiu da sala ${roomID}`);
+  
   for (const room_user of room_users) {
     const broadcast = builder.create(
-      'Room.ParticipantEntered', {headless: true}
+      'Room.ParticipantExited', {headless: true}
     );
-    broadcast.att('roomID', roomID);
-    broadcast.att('username', get_user(clientID).username);
-    broadcast.att('groupID', get_user(clientID).groupID);
-    broadcast.att('seatID', get_user(clientID).seatID);
+    broadcast.att('roomID', user.roomID);
+    broadcast.att('username', user.username);
+    broadcast.att('groupID', user.groupID);
+    broadcast.att('seatID', user.seatID);
 
     room_user.socket.write(broadcast.end() + '\0');
   }
+
+  const root = builder.create('Accepted', {headless: true});
+  root.att('msgID', msgID);
+  root.att('groupID', user.groupID);
+  root.att('seatID', user.seatID);
+  root.att('roomCount', room_users.length);
 
   return root.end();
 }
@@ -185,17 +258,25 @@ function room_action(xml) {
 }
 
 function parse_xml(xml, socket) {
-  if ('System.Login' in xml) {
-    return login(xml, socket);
-  }
-  if ('System.Logout' in xml) {
-    return logout(xml);
-  }
-  if ('Room.Enter' in xml) {
-    return room_enter(xml);
-  }
-  if ('Room.Action' in xml) {
-    return room_action(xml);
+  try {
+    if ('System.Login' in xml) {
+      return login(xml, socket);
+    }
+    if ('System.Logout' in xml) {
+      return logout(xml, socket);
+    }
+    if ('Room.Enter' in xml) {
+      return room_enter(xml, socket);
+    }
+    if ('Room.Exit' in xml) {
+      return room_exit(xml, socket);
+    }
+    if ('Room.Action' in xml) {
+      return room_action(xml);
+    }
+    return error();
+  } catch (err) {
+    return error();
   }
 }
 
@@ -211,11 +292,19 @@ const server = net.createServer((socket) => {
   });
 
   socket.on('close', () => {
-    const user = get_socket_user(socket)
-    console.log(`Usuário desconectado: \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
-    disconnect(user);
+    const user = get_socket_user(socket);
+    if (user) {
+      console.log(`Usuário desconectado: \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
+      disconnect(user);
+    }
+  });
+
+  socket.on('error', (err) => {
+    if (err.code == 'EPIPE') {
+      console.log('\x1b[31mErro EPIPE, provávelmente durante logout.\x1b[0m');
+    }
   });
 });
 
-console.log("Servidor rodando em 127.0.0.1:9000");
-server.listen(9000, '127.0.0.1');
+console.log("Servidor rodando em 0.0.0.0:9000");
+server.listen(9000, '0.0.0.0');

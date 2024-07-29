@@ -2,7 +2,7 @@
 
 Recriação do servidor de um antigo joguinho de flash, thorvarium.
 
-**O servidor está em progresso, mas está jogável.**
+**O servidor está quase completo.**
 
 # Instalação:
 
@@ -30,9 +30,13 @@ Rode ou o `thorvarium1.3_patched.swf` `thorvarium1.2_patched.swf` ou `thorvarium
 
 # To-Do List
 
+- Entender o tal do "RoomDefinition" na resposta do `Room.Enter`.
+
+Eu ainda não sei se é simplesmente uma feature que estava no código mas não foi implementada no jogo, ou se é uma burrice minha. Isso inclui o `Room.CreateAccepted` abaixo, e o `setParticipantGroup()` que não parece ser chamado em nenhum local do código.
+
 ### Mensagens do servidor
 
-- [ ] `Exception`
+- [x] `Exception`
 - [ ] `System.Notify`
 - [ ] `System.HaltedApp`
 - [ ] `System.Heartbeat`
@@ -44,11 +48,20 @@ Rode ou o `thorvarium1.3_patched.swf` `thorvarium1.2_patched.swf` ou `thorvarium
   - [x] `.sendLogin`
   - [x] `.sendLogout`
   - [x] `.sendEnter`
-  - [ ] `.sendExit`
+  - [x] `.sendExit`
   - [ ] `.sendSetParticipantGroup`
 - [ ] `Rejected`
   - [x] `.sendLogin`
   - [x] `.sendLogout`
   - [x] `.sendEnter`
-  - [ ] `.sendExit`
   - [ ] `.sendSetParticipantGroup`
+
+### Mensagens do cliente
+
+- [x] `System.Login`
+- [x] `System.Logout`
+- [x] `Room.Enter`
+- [x] `Room.Exit`
+- [x] `Room.Action`
+
+
