@@ -2,7 +2,7 @@
 
 Recriação do servidor de um antigo joguinho de flash, thorvarium.
 
-**O servidor está funcionando plenamente.**
+**Eu estou temporariamente hosteando um servidor público. Baixe o [Thorvarium 2 global](swf/2/thorvarium2_patched_global.swf) e rode em algum flash player que não seja o Ruffle.**
 
 # Instalação:
 
