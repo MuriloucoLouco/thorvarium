@@ -2,7 +2,7 @@
 
 Recriação do servidor de um antigo joguinho de flash, thorvarium.
 
-**O servidor está quase completo.**
+**O servidor está funcionando plenamente.**
 
 # Instalação:
 
@@ -28,41 +28,51 @@ Rode ou o `thorvarium1.3_patched.swf` `thorvarium1.2_patched.swf` ou `thorvarium
 
 **O JOGO NÃO FUNCIONARÁ NO RUFFLE.RS, POR CONTA DE UM ERRO. O BUG SERÁ CORRIGIDO NO FUTURO.**
 
+Eu estou tentando modificar o código do Thorvarium 2 para ele funcionar no ruffle, mas não consegui ainda.
+
 # To-Do List
-
-- Entender o tal do "RoomDefinition" na resposta do `Room.Enter`.
-
-Eu ainda não sei se é simplesmente uma feature que estava no código mas não foi implementada no jogo, ou se é uma burrice minha. Isso inclui o `Room.CreateAccepted` abaixo, e o `setParticipantGroup()` que não parece ser chamado em nenhum local do código.
 
 ### Mensagens do servidor
 
 - [x] `Exception`
-- [ ] `System.Notify`
-- [ ] `System.HaltedApp`
-- [ ] `System.Heartbeat`
+- [x] `System.Heartbeat`
 - [X] `Room.Action`
 - [X] `Room.ParticipantEntered`
 - [X] `Room.ParticipantExited`
-- [ ] `Room.CreateAccepted`
-- [ ] `Accepted`
+- [x] `Accepted`
   - [x] `.sendLogin`
   - [x] `.sendLogout`
   - [x] `.sendEnter`
   - [x] `.sendExit`
-  - [ ] `.sendSetParticipantGroup`
-- [ ] `Rejected`
+- [x] `Rejected`
   - [x] `.sendLogin`
   - [x] `.sendLogout`
   - [x] `.sendEnter`
-  - [ ] `.sendSetParticipantGroup`
 
 ### Mensagens do cliente
 
 - [x] `policy-file-request`
 - [x] `System.Login`
 - [x] `System.Logout`
+- [x] `System.Heartbeat`
 - [x] `Room.Enter`
 - [x] `Room.Exit`
 - [x] `Room.Action`
 
+Todas as funções originais do servidor foram implementadas. Planejo no futuro implementar funções extras especificas do servidor, para ficar mais divertido.
 
+- Moderação
+
+Quero ver se consigo implementar comandos de moderação. Bloquear spam automaticamente, esse tipo de coisa.
+
+- Segurança
+
+Eu tentei deixar o servidor seguro contra ataques de hackerzinhos, mas o mantra é que não existe nenhum sistema seguro. Portanto, se encontrar qualquer falha, por mais pequena que seja, abra uma issue.
+
+- Entender o tal do "RoomDefinition" na resposta do `Room.Enter`.
+
+Tudo indica que é uma feature não implementada do jogo que ficou lá dentro do código. O source-code do jogo indica que o roomID é hardcoded em cada versão do jogo ("thorvarium", "Thorvarium" e "Thorvarium2"), e o groupID como "participants", e em nenhum lugar do jogo isso muda ou se exige um groupID diferente. As funções relacionadas com a troca de groupID estão incompletas e chamam funções inexistentes ou não são chamadas. Idem para as mensagens de servidor `System.Notify` e `System.HaltedApp`, que não fazem nada. Portanto, vou assumir que elas não devem ser implementadas.
+
+Se tiver algum vetereno do jogo que lembra como era na época, me avise.
+
+No meio do código aparece esse copyright de uma biblioteca usada: `"Fortress Flash Development Kit - Copyright (c) 2000-2002 XadrA LLC. All rights reserved."`. Eu encontrei o linkedin do antigo CTO deles (Ken Scott), mas a página com o Dev kit deles não foi arquivada (eles bloquearam web crawlers em 2001). Quero ver se consigo encontrar o servidor original.

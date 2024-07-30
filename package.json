@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/main.js",
   "scripts": {
-    "dev": "nodemon src/main.js",
+    "dev": "DEBUG_MODE=1 nodemon src/main.js",
     "start": "node src/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
