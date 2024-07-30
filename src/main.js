@@ -142,7 +142,7 @@ function logout(xml, socket) {
   }
 
   console.log(`Usuário deslogado: \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
-  remove_user(user.clientID);
+  disconnect(user);
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
@@ -310,7 +310,7 @@ function on_heartbeat(socket) {
   if (user) {
     console.log(`Heartbeat de \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
   } else {
-    console.log(`Heartbeat de ${socket.address()}`);
+    console.log(`Heartbeat de ${socket.remoteAddress}`);
   }
 
   return null;
@@ -346,7 +346,7 @@ function get_res(xml, socket) {
 }
 
 const server = net.createServer((socket) => {
-  console.log('Usuário conectado!', socket.address());
+  console.log('Usuário conectado!', socket.remoteAddress);
 
   socket.on('data', (data) => {
     if (DEBUG_MODE) console.log(String(data));
