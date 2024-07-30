@@ -142,7 +142,7 @@ function logout(xml, socket) {
   }
 
   console.log(`Usuário deslogado: \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
-  disconnect(user);
+  remove_user(user.clientID);
 
   const root = builder.create('Accepted', {headless: true});
   root.att('msgID', msgID);
@@ -234,7 +234,7 @@ function room_exit(xml, socket) {
     const broadcast = builder.create(
       'Room.ParticipantExited', {headless: true}
     );
-    broadcast.att('roomID', user.roomID);
+    broadcast.att('roomID', roomID);
     broadcast.att('username', user.username);
     broadcast.att('groupID', user.groupID);
     broadcast.att('seatID', user.seatID);
