@@ -23,6 +23,7 @@ const src_dir = path.dirname(require.main.filename); // ./src
 const parser = new xml2js.Parser();
 
 const PORT = process.env.PORT || 9000;
+const DEBUG_MODE = process.env.DEBUG_MODE || false;
 
 function policy_file() {
   try {
@@ -281,7 +282,23 @@ function room_action(xml, socket) {
   return null;
 }
 
-function parse_xml(xml, socket) {
+function send_heartbeat(socket) {
+  const root = builder.create('System.Heartbeat', {headless: true});
+  socket.write(root.end()+'\0');
+}
+
+function on_heartbeat(socket) {
+  const user = get_socket_user(socket);
+  if (user) {
+    console.log(`Heartbeat de \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
+  } else {
+    console.log(`Heartbeat de ${socket.address()}`);
+  }
+
+  return null;
+}
+
+function get_res(xml, socket) {
   try {
     if ('policy-file-request' in xml) {
       return policy_file();
@@ -292,6 +309,9 @@ function parse_xml(xml, socket) {
     if ('System.Logout' in xml) {
       return logout(xml, socket);
     }
+    if ('System.Heartbeat' in xml) {
+      return on_heartbeat(socket);
+    }
     if ('Room.Enter' in xml) {
       return room_enter(xml, socket);
     }
@@ -299,6 +319,7 @@ function parse_xml(xml, socket) {
       return room_exit(xml, socket);
     }
     if ('Room.Action' in xml) {
+      send_notify("testando 123", socket);
       return room_action(xml, socket);
     }
     return error();
@@ -311,11 +332,15 @@ const server = net.createServer((socket) => {
   console.log('Usuário conectado!', socket.address());
 
   socket.on('data', (data) => {
+    if (DEBUG_MODE) console.log(String(data));
+
     const formated_data =
       '<root>'+String(data).replace(/\0$/, '')+'</root>';
-    parser.parseString(formated_data, (err, result) => {
-      const res = parse_xml(result.root, socket);
+
+    parser.parseString(formated_data, (err, parsed_xml) => {
+      const res = get_res(parsed_xml.root, socket);
       if (res) {
+        if (DEBUG_MODE) console.log(res);
         socket.write(res + '\0');
       }
     });
@@ -336,6 +361,9 @@ const server = net.createServer((socket) => {
   });
 });
 
+if (DEBUG_MODE) {
+  console.log("DEBUG MODE")
+}
 console.log(`Servidor rodando em 0.0.0.0:${PORT}`);
 server.listen(PORT, '0.0.0.0');
 console.log();
