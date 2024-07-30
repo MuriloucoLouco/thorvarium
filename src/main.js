@@ -65,21 +65,27 @@ function disconnect(user) {
 }
 
 function login_failed(reason, msgID) {
+  const root = builder.create('Rejected', {headless: true});
+  root.att('msgID', msgID);
+
   if (reason == 'username') {
-    const root = builder.create('Rejected', {headless: true});
-    root.att('msgID', msgID);
     root.att('reason', 'Nome de usuário já utilizado.');
-    root.att('reasonID', 'username');
-    return root.end();
   }
 
   if (reason == 'server_full') {
-    const root = builder.create('Rejected', {headless: true});
-    root.att('msgID', msgID);
     root.att('reason', 'Servidor cheio.');
-    root.att('reasonID', 'server_full');
-    return root.end();
   }
+
+  if (reason == 'characters') {
+    root.att('reason', 'Caracteres invalidos. Caracteres permitidos: 0-9, a-z, A-Z, ., -, _ e acentos.');
+  }
+
+  if (reason == 'size') {
+    root.att('reason', 'Username muito grande.');
+  }
+
+  root.att('reasonID', reason);
+  return root.end();
 }
 
 function login(xml, socket) {
@@ -95,6 +101,14 @@ function login(xml, socket) {
 
   if (get_socket_user(socket)) {
     disconnect(get_socket_user(socket));
+  }
+
+  if (username.match('[^0-9a-zA-ZÀ-ú_.-]+')) {
+    return login_failed('characters', msgID);
+  }
+
+  if (username.length > 32) {
+    return login_failed('size', msgID);
   }
 
   if (get_username_user(username)) {
@@ -242,11 +256,15 @@ function room_action(xml, socket) {
   const clientID = xml['Room.Action'][0]['$']['clientID'];
   const message = decode_hex(xml['Room.Action'][0]['Chat'][0]['_']);
 
+  if (!roomID || !clientID || !message) {
+    return error();
+  }
+
   if (get_user(clientID).socket != socket) {
     return error();
   }
 
-  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m: \x1b[33m${message.slice(0,-1)}\x1b[0m`);
+  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m na sala ${roomID}: \x1b[33m${message}\x1b[0m`);
   new_message(clientID, roomID, message);
 
   const root = builder.create('Room.Action', {headless: true});
@@ -319,7 +337,6 @@ function get_res(xml, socket) {
       return room_exit(xml, socket);
     }
     if ('Room.Action' in xml) {
-      send_notify("testando 123", socket);
       return room_action(xml, socket);
     }
     return error();
