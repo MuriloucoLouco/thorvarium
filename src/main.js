@@ -353,14 +353,18 @@ const server = net.createServer((socket) => {
 
     const formated_data =
       '<root>'+String(data).replace(/\0$/, '')+'</root>';
-
-    parser.parseString(formated_data, (err, parsed_xml) => {
-      const res = get_res(parsed_xml.root, socket);
-      if (res) {
-        if (DEBUG_MODE) console.log(res);
-        socket.write(res + '\0');
-      }
-    });
+    
+    try {
+      parser.parseString(formated_data, (err, parsed_xml) => {
+        const res = get_res(parsed_xml.root, socket);
+        if (res) {
+          if (DEBUG_MODE) console.log(res);
+          socket.write(res + '\0');
+        }
+      });
+    } catch (e) {
+      socket.write(error() + '\0');
+    }
   });
 
   socket.on('close', () => {
