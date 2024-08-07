@@ -30,6 +30,10 @@ Rode ou o `thorvarium1.3_patched.swf` `thorvarium1.2_patched.swf` ou `thorvarium
 
 Eu estou tentando modificar o código do Thorvarium 2 para ele funcionar no ruffle, mas não consegui ainda.
 
+# Configurando
+
+Você pode configurar as mensagens do chatroom editando o arquivo `src/responses.js`. Por padrão, eu manti o mesmo padrão do jogo original.
+
 # To-Do List
 
 ### Mensagens do servidor
@@ -69,9 +73,7 @@ Quero ver se consigo implementar comandos de moderação. Bloquear spam automati
 
 Eu tentei deixar o servidor seguro contra ataques de hackerzinhos, mas o mantra é que não existe nenhum sistema seguro. Portanto, se encontrar qualquer falha, por mais pequena que seja, abra uma issue.
 
-- Entender o tal do "RoomDefinition" na resposta do `Room.Enter`.
-
-Tudo indica que é uma feature não implementada do jogo que ficou lá dentro do código. O source-code do jogo indica que o roomID é hardcoded em cada versão do jogo ("thorvarium", "Thorvarium" e "Thorvarium2"), e o groupID como "participants", e em nenhum lugar do jogo isso muda ou se exige um groupID diferente. As funções relacionadas com a troca de groupID estão incompletas e chamam funções inexistentes ou não são chamadas. Idem para as mensagens de servidor `System.Notify` e `System.HaltedApp`, que não fazem nada. Portanto, vou assumir que elas não devem ser implementadas.
+Um erro gravíssimo que eu notei é que mensagens do chatroom não tinham validação: era plenamente possível enviar XSS, trapacear no jogo, se passar por outros jogadores, entre outros. Tive que fazer uma gambiarra para resolver isso, e de quebra habilitei costumização de mensagens do servidor.
 
 Se tiver algum vetereno do jogo que lembra como era na época, me avise.
 

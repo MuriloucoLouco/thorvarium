@@ -6,7 +6,9 @@ const fs = require('fs');
 
 const {
   decode_hex,
-  encode_text
+  encode_text,
+  filter,
+  cn
 } = require('./tools.js');
 const {
   new_user,
@@ -17,7 +19,12 @@ const {
   remove_user,
   get_username_user
 } = require('./users.js');
-const { new_message } = require('./chat.js');
+const {
+  new_message,
+  parse_message
+} = require('./chat.js');
+const responses = require('./responses.js');
+const { deprecate } = require('util');
 
 const src_dir = path.dirname(require.main.filename); // ./src
 const parser = new xml2js.Parser();
@@ -141,7 +148,7 @@ function logout(xml, socket) {
     return error(msgID);
   }
 
-  console.log(`Usuário deslogado: \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
+  console.log(`Usuário deslogado: ${cn(user)}`);
   remove_user(user.clientID);
 
   const root = builder.create('Accepted', {headless: true});
@@ -166,7 +173,7 @@ function room_enter(xml, socket) {
 
   set_room(clientID, roomID);
   const room_users = get_room_users(roomID);
-  console.log(`Usuário \x1b[35m${user.username}:${clientID}\x1b[0m entrou na sala ${roomID}`);
+  console.log(`Usuário ${cn(user)} entrou na sala ${roomID}`);
   
   for (const room_user of room_users) {
     const broadcast = builder.create(
@@ -228,7 +235,7 @@ function room_exit(xml, socket) {
 
   set_room(clientID, '');
   const room_users = get_room_users(roomID);
-  console.log(`Usuário \x1b[35m${user.username}:${clientID}\x1b[0m saiu da sala ${roomID}`);
+  console.log(`Usuário ${cn(user)} saiu da sala ${roomID}`);
   
   for (const room_user of room_users) {
     const broadcast = builder.create(
@@ -251,6 +258,67 @@ function room_exit(xml, socket) {
   return root.end();
 }
 
+function interpret_action(action) {
+  const user = action.user;
+
+  // comandos
+  if (action.kind == 'command') {
+    if (action.command == 'desafio') {
+      console.log(`[${user.roomID}] Novo desafio: ${cn(user)} para ${cn(action.recipients[0])}`);
+    }
+
+    if (action.command == 'gamestart') {
+      console.log(`[${user.roomID}] Nova batalha: ${cn(user)} X ${cn(user.oponent)}`);
+    }
+
+    if (action.command == 'afinou') {
+      console.log(`[${user.roomID}] Desistiu: ${cn(user)} não tankou o ${cn(user.oponent)}`);
+    }
+
+    if (action.command == 'recado') {
+      console.log(`[${user.roomID}] Recado: ${cn(user)} para ${cn(user.oponent)}: ${action.data}`);
+      return `/system/${action.command}:${responses.recado(user, action.data, action.color)}`
+    }
+
+    return `/system/${action.command}:${action.parameters}`;
+  }
+
+  // mensagens privadas
+  if (action.kind == 'privmsg') {
+    if (action.data == 'accepted') {
+      action.recipients[0].oponent = user;
+      user.oponent = action.recipients[0];
+      console.log(`[${user.roomID}] Desafio aceito: ${cn(user)} para ${cn(action.recipients[0])}`);
+      return responses.accepted(user);
+    }
+    if (action.data == 'refused') {
+      console.log(`[${user.roomID}] Desafio recusado: ${cn(user)} para ${cn(action.recipients[0])}`);
+      return responses.refused(user);
+    }
+    if (action.data == 'playing') {
+      console.log(`[${user.roomID}] Desafio recusado: ${cn(user)} para ${cn(action.recipients[0])}`);
+      return responses.playing(user, action.recipients[0]);
+    }
+  }
+
+  // broadcast
+  if (action.kind == 'broadcast') {
+    if (action.data == 'newbattle') {
+      console.log(`[${user.roomID}] Broadcast: Nova batalha, ${cn(user.oponent)} X ${cn(user)}`);
+      return responses.newbattle(user);
+    }
+    if (action.data == 'backtochat') {
+      console.log(`[${user.roomID}] Broadcast: ${cn(user)} de volta a sala.`);
+      return responses.backtochat(user);
+    }
+  }
+
+  if (action.kind == 'chat') {
+    console.log(`[${user.roomID}] Mensagem de ${cn(user)}: ${action.data}`);
+    return responses.chat(user, action.data);
+  }
+}
+
 function room_action(xml, socket) {
   const roomID = xml['Room.Action'][0]['$']['roomID'];
   const clientID = xml['Room.Action'][0]['$']['clientID'];
@@ -260,41 +328,37 @@ function room_action(xml, socket) {
     return error();
   }
 
-  if (get_user(clientID).socket != socket) {
+  const user = get_user(clientID);
+
+  if (user.socket != socket) {
     return error();
   }
 
-  console.log(`Mensagem de \x1b[35m${get_user(clientID).username}:${clientID}\x1b[0m na sala ${roomID}: \x1b[33m${message}\x1b[0m`);
-  new_message(clientID, roomID, message);
+  const room_users = get_room_users(roomID);
+  const recipient_list = xml['Room.Action'][0]['RecipientList'];
+  const filtered_list = filter(room_users, recipient_list);
+
+  try {
+  const action = parse_message(message, user, filtered_list);
+  if (DEBUG_MODE) console.dir(action, {depth: 0});
+  if (action.error) {
+    return error();
+  }
+  const response_message = interpret_action(action);
 
   const root = builder.create('Room.Action', {headless: true});
-  root.att('username', get_user(clientID).username);
+  root.att('username', user.username);
   root.att('roomID', roomID);
   const chat = root.ele('Chat');
   chat.att('encoding', 'text/binhex');
-  chat.txt(encode_text(message));
-
+  chat.txt(encode_text(response_message));
   const res = root.end();
 
-  const room_users = get_room_users(roomID);
-  const recipient_list = xml['Room.Action'][0]['RecipientList'];
-  const filtered_list = [];
-  if (recipient_list) {
-    filtered_list.push(...room_users.filter((user) => {
-      let allowed = false;
-      Object.keys(recipient_list[0]['$']).forEach((key) => {
-        if (user.username == decode_hex(recipient_list[0]['$'][key])) {
-          allowed = true;
-        }
-      });
-      return allowed;
-    }));
-  } else {
-    filtered_list.push(...room_users);
+  for (const recipient of filtered_list) {
+    recipient.socket.write(res + '\0');
   }
-
-  for (const user of filtered_list) {
-    user.socket.write(res + '\0');
+  } catch (e) {
+    console.log(e);
   }
 
   return null;
@@ -308,7 +372,7 @@ function send_heartbeat(socket) {
 function on_heartbeat(socket) {
   const user = get_socket_user(socket);
   if (user) {
-    console.log(`Heartbeat de \x1b[35m${user.username}:${user.clientID}\x1b[0m`);
+    console.log(`Heartbeat de ${cn(user)}`);
   } else {
     console.log(`Heartbeat de ${socket.remoteAddress}`);
   }
@@ -349,7 +413,7 @@ const server = net.createServer((socket) => {
   console.log('Usuário conectado!', socket.remoteAddress);
 
   socket.on('data', (data) => {
-    if (DEBUG_MODE) console.log(String(data));
+    if (DEBUG_MODE) console.log('\x1b[32mRECEBIDO >>>', String(data), '\x1b[0m');
 
     const formated_data =
       '<root>'+String(data).replace(/\0$/, '')+'</root>';
@@ -358,7 +422,7 @@ const server = net.createServer((socket) => {
       parser.parseString(formated_data, (err, parsed_xml) => {
         const res = get_res(parsed_xml.root, socket);
         if (res) {
-          if (DEBUG_MODE) console.log(res);
+          if (DEBUG_MODE) console.log('\x1b[36mRESPOSTA XML >>>', res, '\x1b[0m');
           socket.write(res + '\0');
         }
       });

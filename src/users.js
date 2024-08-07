@@ -26,9 +26,10 @@ function new_user(username, socket) {
       clientID: clientID,
       username: username,
       roomID: '',
-      socket: socket,
       groupID: 'participants',
-      seatID: 'MyseatID'
+      seatID: 'MyseatID',
+      socket: socket,
+      oponent: null
     }
     users.push(user);
   }
@@ -91,16 +92,18 @@ function set_room(clientID, roomID) {
   }
 }
 
-function list_users() {
+function get_usernames() {
+  const username_list = [];
   for (const user of users) {
-    console.log(user);
+    username_list.push(user.username);
   }
+  return username_list;
 }
 
 module.exports = {
   new_user,
   set_room,
-  list_users,
+  get_usernames,
   get_user,
   get_room_users,
   get_socket_user,
